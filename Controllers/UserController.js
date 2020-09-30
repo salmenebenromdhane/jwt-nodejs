@@ -1,7 +1,7 @@
 const User= require('../models/User')
 const bcrypt = require('bcrypt');
 const jwt= require('jsonwebtoken')
-
+const passport = require('passport');
 
 exports.addUser=(req, res, next)=>{
 
@@ -20,6 +20,40 @@ exports.addUser=(req, res, next)=>{
         res.send(req.body)
   };
 
+  exports.loginWithPassport=(req,res,next)=>{
+    return passport.authenticate('local', { session: false }, (err, passportUser, info) => {
+      if(err) {
+        return next(err);
+      }
+  
+      if(passportUser) {
+        console.log(passportUser);
+        
+        const user = passportUser;
+                    const token = jwt.sign(
+                {
+                  email: passportUser.email,
+                  userId: passportUser._id
+                },
+                process.env.JWT_KEY,
+                {
+                    expiresIn: "1h"
+                }
+              );
+        user.token = token
+  
+    return res.status(200).json({
+        firstName: passportUser.firstName,
+        lastName: passportUser.lastName,
+        email: passportUser.email,
+        token : token
+                     });
+      }
+  
+      return res.status(400).json(info);
+    })(req, res, next);
+    
+  }
   exports.login=(req, res, next)=>{
     
     
@@ -39,6 +73,10 @@ exports.addUser=(req, res, next)=>{
                     expiresIn: "1h"
                 }
               );
+              const { body: { user } } = req;
+        
+         
+            
               return res.status(200).json({
                 message: "Auth successful",
                 token: token
